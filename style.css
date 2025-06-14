@@ -47,3 +47,4 @@ input:focus, select:focus { outline: none; border-color: var(--primary-color); b
 .history-details li { margin-bottom: 5px; color: var(--subtle-text-color); }
 .modal-content p { color: var(--subtle-text-color); line-height: 1.5; margin: 15px 0 25px; }
 .modal-button-group { display: flex; gap: 10px; }
+#end-round-btn { display: none; background-color: var(--success-color); margin-bottom: 10px; }

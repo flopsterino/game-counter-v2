@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerNameInputsContainer = document.getElementById('player-inputs');
     const scoreboard = document.getElementById('scoreboard');
     const historyList = document.getElementById('history-list');
+    const endRoundBtn = document.getElementById('end-round-btn');
 
     // --- DATA PERSISTENCE ---
     function saveState() {
@@ -88,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.players.forEach(p => state.scores[p] = 0);
         state.gameStartTime = new Date().getTime();
         state.isFinalRound = false; state.potentialWinner = null; state.consecutiveWinRounds = 0;
+        
+        endRoundBtn.style.display = 'none'; // Hide the end round button
+        
         state.gameHistory.unshift({ game: state.currentGame, players: state.players, startTime: state.gameStartTime, endTime: null, duration: 'In Progress', winner: null, pointLog: [] });
         renderScoreboard();
         showScreen('game');
@@ -99,16 +103,19 @@ document.addEventListener('DOMContentLoaded', () => {
         state.gameHistory[0].pointLog.push({ player, pointsAdded: points, newScore: state.scores[player], timestamp: new Date().getTime() });
         saveState();
         renderScoreboard();
-        checkGameState();
+        triggerFinalRoundCheck();
     }
 
-    function checkGameState() {
-        if (state.isFinalRound) return;
+    function triggerFinalRoundCheck() {
+        if (state.isFinalRound) return; 
+
         const game = state.games.find(g => g.name === state.currentGame);
         const someoneReachedWinningScore = state.players.some(p => state.scores[p] >= game.winningScore);
+
         if (someoneReachedWinningScore) {
             state.isFinalRound = true;
-            showModal('endOfRound');
+            endRoundBtn.style.display = 'block';
+            alert('A player has reached the winning score!\n\nPlease complete the current round for all players, then tap "End Round & Evaluate Scores".');
         }
     }
 
@@ -116,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let highScore = -Infinity;
         state.players.forEach(p => { if (state.scores[p] > highScore) { highScore = state.scores[p]; } });
         const leaders = state.players.filter(p => state.scores[p] === highScore);
+
         if (leaders.length > 1) {
             state.potentialWinner = null; state.consecutiveWinRounds = 0;
             alert(`Tie for the lead at ${highScore} points! The game continues. Start the next round.`);
@@ -140,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const seconds = ((durationMs % 60000) / 1000).toFixed(0);
         state.gameHistory[0].endTime = endTime; state.gameHistory[0].winner = winner; state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
         saveState();
+        endRoundBtn.style.display = 'none';
         showModal('winner');
     }
     
@@ -150,6 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
+    endRoundBtn.addEventListener('click', () => {
+        showModal('endOfRound');
+    });
     document.getElementById('add-player-field-btn').addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'text'; input.placeholder = `Player ${playerNameInputsContainer.children.length + 1} Name`; input.className = 'player-name-input';
