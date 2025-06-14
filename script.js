@@ -1,25 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- CONFIGURATION ---
-    const ROUNDS_TO_WIN = 2; // Must hold the lead for this many consecutive rounds to win.
-
-    // --- STATE MANAGEMENT ---
+    // --- STATE MANAGEMENT (Simplified) ---
     let state = {
-        games: [], players: [], scores: {}, currentGame: null, gameStartTime: null, gameHistory: [], isFinalRound: false, potentialWinner: null, consecutiveWinRounds: 0
+        games: [],
+        players: [],
+        scores: {},
+        currentGame: null,
+        gameStartTime: null,
+        gameHistory: [],
+        endGamePromptShown: false // New flag to show prompt only once
     };
 
     // DOM ELEMENTS
     const screens = {
-        setup: document.getElementById('setup-screen'), game: document.getElementById('game-screen'), history: document.getElementById('history-screen')
+        setup: document.getElementById('setup-screen'),
+        game: document.getElementById('game-screen'),
+        history: document.getElementById('history-screen')
     };
     const modals = {
-        winner: document.getElementById('winner-modal'), manageGames: document.getElementById('manage-games-modal'), endOfRound: document.getElementById('end-of-round-modal')
+        winner: document.getElementById('winner-modal'),
+        manageGames: document.getElementById('manage-games-modal'),
+        endOfRound: document.getElementById('end-of-round-modal')
     };
     const gameSelect = document.getElementById('game-select');
     const playerNameInputsContainer = document.getElementById('player-inputs');
     const scoreboard = document.getElementById('scoreboard');
     const historyList = document.getElementById('history-list');
-    const endRoundBtn = document.getElementById('end-round-btn');
-
+    
     // --- DATA PERSISTENCE ---
     function saveState() {
         try {
@@ -82,15 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- GAME LOGIC ---
     function startGame() {
         state.players = [...document.querySelectorAll('.player-name-input')].map(input => input.value.trim()).filter(name => name);
-        if (state.players.length < 2) { alert('Please enter at least two player names.'); return; }
+        if (state.players.length < 1) { alert('Please enter at least one player name.'); return; }
         state.currentGame = gameSelect.value;
         if (!state.currentGame) { alert('Please create a game first in "Manage Games"!'); return; }
         state.scores = {};
         state.players.forEach(p => state.scores[p] = 0);
         state.gameStartTime = new Date().getTime();
-        state.isFinalRound = false; state.potentialWinner = null; state.consecutiveWinRounds = 0;
-        
-        endRoundBtn.style.display = 'none'; // Hide the end round button
+        state.endGamePromptShown = false; // Reset the prompt flag
         
         state.gameHistory.unshift({ game: state.currentGame, players: state.players, startTime: state.gameStartTime, endTime: null, duration: 'In Progress', winner: null, pointLog: [] });
         renderScoreboard();
@@ -103,52 +107,50 @@ document.addEventListener('DOMContentLoaded', () => {
         state.gameHistory[0].pointLog.push({ player, pointsAdded: points, newScore: state.scores[player], timestamp: new Date().getTime() });
         saveState();
         renderScoreboard();
-        triggerFinalRoundCheck();
+        checkAndPromptEndGame();
     }
 
-    function triggerFinalRoundCheck() {
-        if (state.isFinalRound) return; 
+    function checkAndPromptEndGame() {
+        if (state.endGamePromptShown) return; // Don't show the prompt again if it has already been shown
 
         const game = state.games.find(g => g.name === state.currentGame);
         const someoneReachedWinningScore = state.players.some(p => state.scores[p] >= game.winningScore);
 
         if (someoneReachedWinningScore) {
-            state.isFinalRound = true;
-            endRoundBtn.style.display = 'block';
-            alert('A player has reached the winning score!\n\nPlease complete the current round for all players, then tap "End Round & Evaluate Scores".');
+            state.endGamePromptShown = true; // Set flag so it doesn't show again
+            showModal('endOfRound'); // Re-using the same modal element
         }
     }
 
-    function evaluateEndOfRound() {
+    function declareWinner() {
+        let winner = null;
         let highScore = -Infinity;
-        state.players.forEach(p => { if (state.scores[p] > highScore) { highScore = state.scores[p]; } });
-        const leaders = state.players.filter(p => state.scores[p] === highScore);
 
-        if (leaders.length > 1) {
-            state.potentialWinner = null; state.consecutiveWinRounds = 0;
-            alert(`Tie for the lead at ${highScore} points! The game continues. Start the next round.`);
-        } else {
-            const soleLeader = leaders[0];
-            if (state.potentialWinner === soleLeader) { state.consecutiveWinRounds++; } else { state.potentialWinner = soleLeader; state.consecutiveWinRounds = 1; }
-            if (state.consecutiveWinRounds >= ROUNDS_TO_WIN) {
-                declareWinner(soleLeader);
-            } else {
-                const roundsRemaining = ROUNDS_TO_WIN - state.consecutiveWinRounds;
-                alert(`${soleLeader} has the lead with ${highScore} points! They must hold the lead for ${roundsRemaining} more round(s) to win. Start the next round.`);
+        // Find the player with the absolute highest score at this moment
+        state.players.forEach(p => {
+            if (state.scores[p] > highScore) {
+                highScore = state.scores[p];
+                winner = p;
             }
+        });
+        
+        // Handle case where no winner is found (e.g., all negative scores)
+        if (!winner) {
+             winner = state.players[0]; // Default to first player
         }
-    }
 
-    function declareWinner(winner) {
         document.getElementById(`player-card-${winner.replace(/\s+/g, '-')}`).classList.add('winner');
         document.getElementById('winner-name').textContent = winner;
+
         const endTime = new Date().getTime();
         const durationMs = endTime - state.gameHistory[0].startTime;
         const minutes = Math.floor(durationMs / 60000);
         const seconds = ((durationMs % 60000) / 1000).toFixed(0);
-        state.gameHistory[0].endTime = endTime; state.gameHistory[0].winner = winner; state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
+        
+        state.gameHistory[0].endTime = endTime;
+        state.gameHistory[0].winner = winner;
+        state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
         saveState();
-        endRoundBtn.style.display = 'none';
         showModal('winner');
     }
     
@@ -159,9 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
-    endRoundBtn.addEventListener('click', () => {
-        showModal('endOfRound');
-    });
     document.getElementById('add-player-field-btn').addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'text'; input.placeholder = `Player ${playerNameInputsContainer.children.length + 1} Name`; input.className = 'player-name-input';
@@ -203,9 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
             details.style.display = details.style.display === 'block' ? 'none' : 'block';
         }
     });
-    document.getElementById('round-finished-no').addEventListener('click', () => { showModal('endOfRound', false); });
+    
+    // Listeners for the simplified "End of Game?" prompt
+    document.getElementById('round-finished-no').addEventListener('click', () => {
+        showModal('endOfRound', false); // Just close the modal and continue the game
+    });
     document.getElementById('round-finished-yes').addEventListener('click', () => {
-        showModal('endOfRound', false); evaluateEndOfRound();
+        showModal('endOfRound', false); 
+        declareWinner(); // End the game and find the highest score
     });
 
     // --- INITIALIZATION ---
