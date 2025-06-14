@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.scores = {};
         state.players.forEach(p => state.scores[p] = 0);
         state.gameStartTime = new Date().getTime();
-        state.endGamePromptShown = false; // Reset the prompt flag
+        state.endGamePromptShown = false;
         
         state.gameHistory.unshift({ game: state.currentGame, players: state.players, startTime: state.gameStartTime, endTime: null, duration: 'In Progress', winner: null, pointLog: [] });
         renderScoreboard();
@@ -111,22 +111,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkAndPromptEndGame() {
-        if (state.endGamePromptShown) return; // Don't show the prompt again if it has already been shown
+        if (state.endGamePromptShown) return;
 
         const game = state.games.find(g => g.name === state.currentGame);
         const someoneReachedWinningScore = state.players.some(p => state.scores[p] >= game.winningScore);
 
         if (someoneReachedWinningScore) {
-            state.endGamePromptShown = true; // Set flag so it doesn't show again
-            showModal('endOfRound'); // Re-using the same modal element
+            state.endGamePromptShown = true;
+            showModal('endOfRound');
         }
     }
 
     function declareWinner() {
+        // Prevent declaring a winner if a game hasn't started
+        if (!state.gameStartTime) return;
+
         let winner = null;
         let highScore = -Infinity;
 
-        // Find the player with the absolute highest score at this moment
         state.players.forEach(p => {
             if (state.scores[p] > highScore) {
                 highScore = state.scores[p];
@@ -134,9 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Handle case where no winner is found (e.g., all negative scores)
         if (!winner) {
-             winner = state.players[0]; // Default to first player
+             winner = state.players[0] || 'N/A';
         }
 
         document.getElementById(`player-card-${winner.replace(/\s+/g, '-')}`).classList.add('winner');
@@ -147,10 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = Math.floor(durationMs / 60000);
         const seconds = ((durationMs % 60000) / 1000).toFixed(0);
         
-        state.gameHistory[0].endTime = endTime;
-        state.gameHistory[0].winner = winner;
-        state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
-        saveState();
+        // Finalize the history entry if it's still in progress
+        if (state.gameHistory[0] && state.gameHistory[0].duration === 'In Progress') {
+            state.gameHistory[0].endTime = endTime;
+            state.gameHistory[0].winner = winner;
+            state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
+            saveState();
+        }
+
         showModal('winner');
     }
     
@@ -173,6 +178,14 @@ document.addEventListener('DOMContentLoaded', () => {
             addScore(player, points); input.value = '';
         }
     });
+
+    // New listener for our stop game button
+    document.getElementById('stop-game-btn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to end the game and declare a winner now?')) {
+            declareWinner();
+        }
+    });
+
     document.getElementById('new-game-from-winner-btn').addEventListener('click', startNewGame);
     document.getElementById('new-game-from-game-btn').addEventListener('click', startNewGame);
     document.getElementById('manage-games-btn').addEventListener('click', () => { updateManageGamesList(); showModal('manageGames'); });
@@ -203,13 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Listeners for the simplified "End of Game?" prompt
     document.getElementById('round-finished-no').addEventListener('click', () => {
-        showModal('endOfRound', false); // Just close the modal and continue the game
+        showModal('endOfRound', false);
     });
     document.getElementById('round-finished-yes').addEventListener('click', () => {
         showModal('endOfRound', false); 
-        declareWinner(); // End the game and find the highest score
+        declareWinner();
     });
 
     // --- INITIALIZATION ---
