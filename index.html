@@ -28,9 +28,11 @@
                     <button id="add-player-field-btn" class="secondary">Add Another Player</button>
                 </div>
                 <button id="start-game-btn" class="primary">Start Game</button>
+                <button id="view-koth-btn">King of the Hill</button>
                 <button id="view-history-btn">View Game History</button>
             </main>
         </div>
+
         <div id="game-screen" class="screen">
             <header>
                 <h1 id="game-title"></h1>
@@ -42,6 +44,7 @@
                 <button id="new-game-from-game-btn">New Game</button>
             </footer>
         </div>
+
         <div id="winner-modal" class="modal-overlay">
             <div class="modal-content winner-card">
                 <h2>WINNER!</h2>
@@ -49,6 +52,7 @@
                 <button id="new-game-from-winner-btn" class="primary">Start New Game</button>
             </div>
         </div>
+        
         <div id="end-of-round-modal" class="modal-overlay">
             <div class="modal-content">
                 <h2>End of Game?</h2>
@@ -59,6 +63,7 @@
                 </div>
             </div>
         </div>
+
         <div id="manage-games-modal" class="modal-overlay">
             <div class="modal-content">
                 <h2>Manage Games</h2>
@@ -70,11 +75,27 @@
                 <button id="close-manage-games-btn" class="secondary">Close</button>
             </div>
         </div>
+
         <div id="history-screen" class="screen">
             <header><h1>Game History</h1></header>
             <main id="history-list"></main>
             <footer>
-                <button id="back-to-setup-btn">Back to Setup</button>
+                <button id="back-to-setup-btn" class="secondary">Back to Setup</button>
+            </footer>
+        </div>
+
+        <div id="koth-screen" class="screen">
+            <header><h1>King of the Hill</h1></header>
+            <main>
+                <div class="card">
+                    <button id="declare-king-btn" class="primary">Declare Champions</button>
+                    <button id="new-session-btn" class="danger">New King of the Session</button>
+                </div>
+                <div id="koth-results-content">
+                    </div>
+            </main>
+            <footer>
+                <button id="back-to-setup-from-koth-btn" class="secondary">Back to Setup</button>
             </footer>
         </div>
     </div>

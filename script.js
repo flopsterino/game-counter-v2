@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- STATE MANAGEMENT (Simplified) ---
+    // --- STATE MANAGEMENT ---
     let state = {
         games: [],
         players: [],
@@ -7,14 +7,16 @@ document.addEventListener('DOMContentLoaded', () => {
         currentGame: null,
         gameStartTime: null,
         gameHistory: [],
-        endGamePromptShown: false // New flag to show prompt only once
+        endGamePromptShown: false,
+        sessionStats: {} // New structure: { 'Catan': { wins: {'p1': 1}, losses: {'p2': 1} } }
     };
 
     // DOM ELEMENTS
     const screens = {
         setup: document.getElementById('setup-screen'),
         game: document.getElementById('game-screen'),
-        history: document.getElementById('history-screen')
+        history: document.getElementById('history-screen'),
+        koth: document.getElementById('koth-screen')
     };
     const modals = {
         winner: document.getElementById('winner-modal'),
@@ -25,12 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerNameInputsContainer = document.getElementById('player-inputs');
     const scoreboard = document.getElementById('scoreboard');
     const historyList = document.getElementById('history-list');
-    
+    const kothResultsContent = document.getElementById('koth-results-content');
+
     // --- DATA PERSISTENCE ---
     function saveState() {
         try {
-            localStorage.setItem('gameCounterState', JSON.stringify({ games: state.games, gameHistory: state.gameHistory }));
-        } catch (e) { console.error("Could not save state to localStorage", e); }
+            localStorage.setItem('gameCounterState', JSON.stringify({
+                games: state.games,
+                gameHistory: state.gameHistory,
+                sessionStats: state.sessionStats
+            }));
+        } catch (e) { console.error("Could not save state", e); }
     }
 
     function loadState() {
@@ -39,10 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (savedState) {
                 state.games = savedState.games || [];
                 state.gameHistory = savedState.gameHistory || [];
+                state.sessionStats = savedState.sessionStats || {};
             }
         } catch (e) {
-            console.error("Could not parse saved state, starting fresh.", e);
-            state.games = []; state.gameHistory = [];
+            Object.assign(state, { games: [], gameHistory: [], sessionStats: {} });
         }
         if (state.games.length === 0) {
             state.games.push({ name: 'Rummikub', winningScore: 100 });
@@ -53,24 +60,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- UI & SCREEN LOGIC ---
     function showScreen(screenName) {
         Object.values(screens).forEach(s => s.classList.remove('active'));
-        screens[screenName].classList.add('active');
+        if (screens[screenName]) screens[screenName].classList.add('active');
     }
 
     function showModal(modalName, show = true) {
-        if (modals[modalName]) {
-            modals[modalName].classList.toggle('active', show);
-        } else {
-            console.error(`Modal with name "${modalName}" not found.`);
-        }
+        if (modals[modalName]) modals[modalName].classList.toggle('active', show);
     }
 
     function updateGameSelect() {
         gameSelect.innerHTML = state.games.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
     }
-    
+
     function updateManageGamesList() {
-        const listEl = document.getElementById('saved-games-list');
-        listEl.innerHTML = state.games.map((game, index) => `<div><span>${game.name} (${game.winningScore} points)</span><button data-index="${index}" class="delete-game-btn">X</button></div>`).join('');
+        document.getElementById('saved-games-list').innerHTML = state.games.map((game, index) => `<div><span>${game.name} (${game.winningScore} points)</span><button data-index="${index}" class="delete-game-btn">X</button></div>`).join('');
     }
 
     function renderScoreboard() {
@@ -80,42 +82,109 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('winning-score-display').textContent = `First to ${game.winningScore} wins!`;
         scoreboard.innerHTML = state.players.map(player => `<div class="player-score-card" id="player-card-${player.replace(/\s+/g, '-')}"><div class="player-header"><span class="player-name">${player}</span><div class="current-score-container"><div class="current-score">${state.scores[player]}</div><div class="current-score-label">POINTS</div></div></div><div class="score-input-area"><input type="number" class="score-input" placeholder="Add points..."><button class="add-score-btn primary" data-player="${player}">Add</button></div></div>`).join('');
     }
-    
+
     function renderHistory() {
-        historyList.innerHTML = state.gameHistory.map((entry, index) => `<div class="history-entry"><div class="history-summary" data-index="${index}"><h3>${entry.game}</h3><p>Winner: ${entry.winner || 'Incomplete'} (${new Date(entry.startTime).toLocaleDateString()})</p><p>Duration: ${entry.duration}</p></div><div class="history-details" id="details-${index}"><p><strong>Players:</strong> ${entry.players.join(', ')}</p><p><strong>Point Log:</strong></p><ul>${entry.pointLog.map(log => `<li>${log.player} scored ${log.pointsAdded} (New Total: ${log.newScore})</li>`).join('')}</ul></div></div>`).join('');
+        historyList.innerHTML = state.gameHistory.map(entry => `<div class="history-entry"><div class="history-summary"><h3>${entry.game}</h3><p>Winner: ${entry.winner || 'Incomplete'} (${new Date(entry.startTime).toLocaleDateString()})</p><p>Duration: ${entry.duration}</p></div></div>`).join('');
+    }
+
+    // --- KING OF THE HILL LOGIC ---
+    function renderKingOfTheHill() {
+        // 1. Calculate King of the Session (Overall Wins)
+        const totalWins = {};
+        for (const gameName in state.sessionStats) {
+            const gameData = state.sessionStats[gameName];
+            for (const playerName in gameData.wins) {
+                totalWins[playerName] = (totalWins[playerName] || 0) + gameData.wins[playerName];
+            }
+        }
+
+        let kingContent = '<h2>No games played in this session yet.</h2>';
+        if (Object.keys(totalWins).length > 0) {
+            const sortedTotalWins = Object.entries(totalWins).sort(([, a], [, b]) => b - a);
+            const kingHighScore = sortedTotalWins[0][1];
+            const kings = sortedTotalWins.filter(([, score]) => score === kingHighScore).map(([name]) => name);
+            kingContent = `
+                <div class="koth-winner-card king">
+                    <h2>👑 King of the Session</h2>
+                    <p>${kings.join(' & ')}</p>
+                    <span>with ${kingHighScore} total win(s)</span>
+                </div>
+            `;
+        }
+
+        // 2. Calculate Duke of each Game
+        let dukeContent = '';
+        for (const gameName in state.sessionStats) {
+            const gameData = state.sessionStats[gameName];
+            const sortedGameWins = Object.entries(gameData.wins).sort(([, a], [, b]) => b - a);
+            
+            if (sortedGameWins.length > 0) {
+                const dukeHighScore = sortedGameWins[0][1];
+                const dukes = sortedGameWins.filter(([, score]) => score === dukeHighScore).map(([name]) => name);
+                
+                dukeContent += `
+                    <div class="card">
+                        <div class="koth-winner-card duke">
+                            <h2>Duke of ${gameName}</h2>
+                            <p>${dukes.join(' & ')}</p>
+                            <span>with ${dukeHighScore} win(s)</span>
+                        </div>
+                        <ul class="koth-player-stats">
+                            ${Object.keys(gameData.wins).map(playerName => `
+                                <li>
+                                    <span>${playerName}</span>
+                                    <span class="record">${gameData.wins[playerName] || 0}W - ${gameData.losses[playerName] || 0}L</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+        kothResultsContent.innerHTML = kingContent + dukeContent;
     }
 
     // --- GAME LOGIC ---
+    function startNewSession() {
+        if (confirm('Are you sure you want to start a new session? All King of the Hill stats will be reset.')) {
+            state.sessionStats = {};
+            saveState();
+            kothResultsContent.innerHTML = ''; // Clear results display
+            alert('New session started. Stats have been reset.');
+        }
+    }
+
+    function ensureGameObject(gameName) {
+        if (!state.sessionStats[gameName]) {
+            state.sessionStats[gameName] = { wins: {}, losses: {} };
+        }
+    }
+    
     function startGame() {
         state.players = [...document.querySelectorAll('.player-name-input')].map(input => input.value.trim()).filter(name => name);
         if (state.players.length < 1) { alert('Please enter at least one player name.'); return; }
         state.currentGame = gameSelect.value;
-        if (!state.currentGame) { alert('Please create a game first in "Manage Games"!'); return; }
+        if (!state.currentGame) { alert('Please create a game first!'); return; }
         state.scores = {};
         state.players.forEach(p => state.scores[p] = 0);
         state.gameStartTime = new Date().getTime();
         state.endGamePromptShown = false;
-        
         state.gameHistory.unshift({ game: state.currentGame, players: state.players, startTime: state.gameStartTime, endTime: null, duration: 'In Progress', winner: null, pointLog: [] });
         renderScoreboard();
         showScreen('game');
     }
 
     function addScore(player, points) {
-        if (isNaN(points) || points === 0) return;
+        if (isNaN(points)) return;
         state.scores[player] += points;
-        state.gameHistory[0].pointLog.push({ player, pointsAdded: points, newScore: state.scores[player], timestamp: new Date().getTime() });
-        saveState();
-        renderScoreboard();
+        renderScoreboard(); // render immediately for responsiveness
         checkAndPromptEndGame();
     }
-
+    
     function checkAndPromptEndGame() {
         if (state.endGamePromptShown) return;
-
         const game = state.games.find(g => g.name === state.currentGame);
         const someoneReachedWinningScore = state.players.some(p => state.scores[p] >= game.winningScore);
-
         if (someoneReachedWinningScore) {
             state.endGamePromptShown = true;
             showModal('endOfRound');
@@ -123,39 +192,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function declareWinner() {
-        // Prevent declaring a winner if a game hasn't started
         if (!state.gameStartTime) return;
-
         let winner = null;
         let highScore = -Infinity;
+        state.players.forEach(p => { if (state.scores[p] > highScore) { highScore = state.scores[p]; winner = p; } });
+        if (!winner) { winner = state.players[0] || 'N/A'; }
 
-        state.players.forEach(p => {
-            if (state.scores[p] > highScore) {
-                highScore = state.scores[p];
-                winner = p;
+        // Update session stats
+        const gameName = state.currentGame;
+        ensureGameObject(gameName);
+        state.sessionStats[gameName].wins[winner] = (state.sessionStats[gameName].wins[winner] || 0) + 1;
+        state.players.forEach(player => {
+            if (player !== winner) {
+                state.sessionStats[gameName].losses[player] = (state.sessionStats[gameName].losses[player] || 0) + 1;
             }
         });
         
-        if (!winner) {
-             winner = state.players[0] || 'N/A';
-        }
-
-        document.getElementById(`player-card-${winner.replace(/\s+/g, '-')}`).classList.add('winner');
         document.getElementById('winner-name').textContent = winner;
-
+        
         const endTime = new Date().getTime();
-        const durationMs = endTime - state.gameHistory[0].startTime;
+        const durationMs = endTime - state.gameStartTime;
         const minutes = Math.floor(durationMs / 60000);
         const seconds = ((durationMs % 60000) / 1000).toFixed(0);
         
-        // Finalize the history entry if it's still in progress
         if (state.gameHistory[0] && state.gameHistory[0].duration === 'In Progress') {
             state.gameHistory[0].endTime = endTime;
             state.gameHistory[0].winner = winner;
             state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
-            saveState();
         }
-
+        saveState();
         showModal('winner');
     }
     
@@ -166,6 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
+    document.getElementById('view-koth-btn').addEventListener('click', () => showScreen('koth'));
+    document.getElementById('declare-king-btn').addEventListener('click', renderKingOfTheHill);
+    document.getElementById('new-session-btn').addEventListener('click', startNewSession);
+    document.getElementById('back-to-setup-from-koth-btn').addEventListener('click', () => showScreen('setup'));
+
     document.getElementById('add-player-field-btn').addEventListener('click', () => {
         const input = document.createElement('input');
         input.type = 'text'; input.placeholder = `Player ${playerNameInputsContainer.children.length + 1} Name`; input.className = 'player-name-input';
@@ -178,14 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addScore(player, points); input.value = '';
         }
     });
-
-    // New listener for our stop game button
-    document.getElementById('stop-game-btn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to end the game and declare a winner now?')) {
-            declareWinner();
-        }
-    });
-
+    document.getElementById('stop-game-btn').addEventListener('click', () => { if (confirm('Are you sure you want to end the game?')) declareWinner(); });
     document.getElementById('new-game-from-winner-btn').addEventListener('click', startNewGame);
     document.getElementById('new-game-from-game-btn').addEventListener('click', startNewGame);
     document.getElementById('manage-games-btn').addEventListener('click', () => { updateManageGamesList(); showModal('manageGames'); });
@@ -196,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (name && score > 0) {
             state.games.push({ name, winningScore: score }); saveState(); updateGameSelect(); updateManageGamesList();
             nameInput.value = ''; scoreInput.value = '';
-        } else { alert('Please enter a valid name and winning score.'); }
+        } else { alert('Please enter a valid name and score.'); }
     });
     document.getElementById('saved-games-list').addEventListener('click', e => {
         if (e.target.classList.contains('delete-game-btn')) {
@@ -208,21 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('view-history-btn').addEventListener('click', () => { renderHistory(); showScreen('history'); });
     document.getElementById('back-to-setup-btn').addEventListener('click', () => showScreen('setup'));
-    historyList.addEventListener('click', e => {
-        if (e.target.closest('.history-summary')) {
-            const index = e.target.closest('.history-summary').dataset.index;
-            const details = document.getElementById(`details-${index}`);
-            details.style.display = details.style.display === 'block' ? 'none' : 'block';
-        }
-    });
-    
-    document.getElementById('round-finished-no').addEventListener('click', () => {
-        showModal('endOfRound', false);
-    });
-    document.getElementById('round-finished-yes').addEventListener('click', () => {
-        showModal('endOfRound', false); 
-        declareWinner();
-    });
+    document.getElementById('round-finished-no').addEventListener('click', () => showModal('endOfRound', false));
+    document.getElementById('round-finished-yes').addEventListener('click', () => { showModal('endOfRound', false); declareWinner(); });
 
     // --- INITIALIZATION ---
     loadState();
@@ -231,11 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('service-worker.js').then(reg => {
-                console.log('Service worker registered.', reg);
-            }).catch(err => {
-                console.error('Service worker registration failed:', err);
-            });
+            navigator.serviceWorker.register('service-worker.js').then(reg => console.log('SW registered.', reg)).catch(err => console.error('SW registration failed:', err));
         });
     }
 });

@@ -16,7 +16,6 @@ button { display: block; width: 100%; padding: 15px; border: none; border-radius
 button:active { transform: scale(0.98); }
 button.primary { background-color: var(--primary-color); color: white; }
 button.secondary { background-color: var(--border-color); color: var(--text-color); }
-/* Added style for danger button */
 button.danger { background-color: var(--danger-color); color: white; }
 input[type="text"], input[type="number"], select { width: 100%; padding: 14px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 1rem; box-sizing: border-box; background-color: #fcfcfd; }
 input:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2); }
@@ -49,3 +48,12 @@ input:focus, select:focus { outline: none; border-color: var(--primary-color); b
 .history-details li { margin-bottom: 5px; color: var(--subtle-text-color); }
 .modal-content p { color: var(--subtle-text-color); line-height: 1.5; margin: 15px 0 25px; }
 .modal-button-group { display: flex; gap: 10px; }
+/* Styles for King of the Hill Screen */
+.koth-winner-card { text-align: center; padding: 20px; color: white; border-radius: 12px; margin-bottom: 25px; }
+.koth-winner-card.king { background-color: var(--primary-color); }
+.koth-winner-card.duke { background-color: var(--secondary-color); }
+.koth-winner-card h2 { margin: 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+.koth-winner-card p { font-size: 2rem; font-weight: bold; margin: 5px 0; }
+.koth-player-stats { list-style: none; padding: 0; }
+.koth-player-stats li { display: flex; justify-content: space-between; align-items: center; padding: 15px; background-color: #fff; border-radius: 10px; margin-bottom: 10px; box-shadow: var(--card-shadow); font-size: 1.1rem; }
+.koth-player-stats .record { font-weight: bold; font-size: 1.2rem; }
