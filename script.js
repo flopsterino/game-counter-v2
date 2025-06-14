@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameHistory: [],
         endGamePromptShown: false,
         sessionStats: {}, // Tracks wins/losses per game for the session
-        lastPlayers: [] // New: To remember the last set of players
+        lastPlayers: [] // To remember the last set of players
     };
 
     // DOM ELEMENTS
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 games: state.games,
                 gameHistory: state.gameHistory,
                 sessionStats: state.sessionStats,
-                lastPlayers: state.lastPlayers // Save the last players
+                lastPlayers: state.lastPlayers
             }));
         } catch (e) { console.error("Could not save state", e); }
     }
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.games = savedState.games || [];
                 state.gameHistory = savedState.gameHistory || [];
                 state.sessionStats = savedState.sessionStats || {};
-                state.lastPlayers = savedState.lastPlayers || []; // Load the last players
+                state.lastPlayers = savedState.lastPlayers || [];
             }
         } catch (e) {
             Object.assign(state, { games: [], gameHistory: [], sessionStats: {}, lastPlayers: [] });
@@ -71,11 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateGameSelect() {
-        gameSelect.innerHTML = state.games.map(g => `<option value="<span class="math-inline">\{g\.name\}"\></span>{g.name}</option>`).join('');
+        gameSelect.innerHTML = state.games.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
     }
 
     function updateManageGamesList() {
-        document.getElementById('saved-games-list').innerHTML = state.games.map((game, index) => `<div><span><span class="math-inline">\{game\.name\} \(</span>{game.winningScore} points)</span><button data-index="${index}" class="delete-game-btn">X</button></div>`).join('');
+        document.getElementById('saved-games-list').innerHTML = state.games.map((game, index) => `<div><span>${game.name} (${game.winningScore} points)</span><button data-index="${index}" class="delete-game-btn">X</button></div>`).join('');
     }
 
     function renderScoreboard() {
@@ -83,14 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!game) return;
         document.getElementById('game-title').textContent = state.currentGame;
         document.getElementById('winning-score-display').textContent = `First to ${game.winningScore} wins!`;
-        scoreboard.innerHTML = state.players.map(player => `<div class="player-score-card" id="player-card-<span class="math-inline">\{player\.replace\(/\\s\+/g, '\-'\)\}"\><div class\="player\-header"\><span class\="player\-name"\></span>{player}</span><div class="current-score-container"><div class="current-score"><span class="math-inline">\{state\.scores\[player\]\}</div\><div class\="current\-score\-label"\>POINTS</div\></div\></div\><div class\="score\-input\-area"\><input type\="number" class\="score\-input" placeholder\="Add points\.\.\."\><button class\="add\-score\-btn primary" data\-player\="</span>{player}">Add</button></div></div>`).join('');
+        scoreboard.innerHTML = state.players.map(player => `<div class="player-score-card" id="player-card-${player.replace(/\s+/g, '-')}"><div class="player-header"><span class="player-name">${player}</span><div class="current-score-container"><div class="current-score">${state.scores[player]}</div><div class="current-score-label">POINTS</div></div></div><div class="score-input-area"><input type="number" class="score-input" placeholder="Add points..."><button class="add-score-btn primary" data-player="${player}">Add</button></div></div>`).join('');
     }
 
     function renderHistory() {
-        historyList.innerHTML = state.gameHistory.map(entry => `<div class="history-entry"><div class="history-summary"><h3>${entry.game}</h3><p>Winner: <span class="math-inline">\{entry\.winner \|\| 'Incomplete'\} \(</span>{new Date(entry.startTime).toLocaleDateString()})</p><p>Duration: ${entry.duration}</p></div></div>`).join('');
+        historyList.innerHTML = state.gameHistory.map(entry => `<div class="history-entry"><div class="history-summary"><h3>${entry.game}</h3><p>Winner: ${entry.winner || 'Incomplete'} (${new Date(entry.startTime).toLocaleDateString()})</p><p>Duration: ${entry.duration}</p></div></div>`).join('');
     }
     
-    // New function to pre-fill player names
     function populateLastPlayers() {
         if (state.lastPlayers && state.lastPlayers.length > 0) {
             playerNameInputsContainer.innerHTML = ''; // Clear default inputs
@@ -126,11 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let dukeContent = '';
         for (const gameName in state.sessionStats) {
             const gameData = state.sessionStats[gameName];
-            const sortedGameWins = Object.entries(gameData.wins).sort(([, a], [, b]) => b - a);
+            // Create a combined list of all players for this game
+            const allPlayersForGame = new Set([...Object.keys(gameData.wins), ...Object.keys(gameData.losses)]);
+            const sortedGameWins = Array.from(allPlayersForGame).sort((a, b) => (gameData.wins[b] || 0) - (gameData.wins[a] || 0));
+
             if (sortedGameWins.length > 0) {
-                const dukeHighScore = sortedGameWins[0][1];
-                const dukes = sortedGameWins.filter(([, score]) => score === dukeHighScore).map(([name]) => name);
-                dukeContent += `<div class="card"><div class="koth-winner-card duke"><h2>Duke of <span class="math-inline">\{gameName\}</h2\><p\></span>{dukes.join(' & ')}</p><span>with <span class="math-inline">\{dukeHighScore\} win\(s\)</span\></div\><ul class\="koth\-player\-stats"\></span>{Object.keys(gameData.wins).map(playerName => `<li><span>${playerName}</span><span class="record">${gameData.wins[playerName] || 0}W - ${gameData.losses[playerName] || 0}L</span></li>`).join('')}</ul></div>`;
+                const dukeHighScore = gameData.wins[sortedGameWins[0]] || 0;
+                const dukes = sortedGameWins.filter(player => (gameData.wins[player] || 0) === dukeHighScore);
+                
+                dukeContent += `<div class="card"><div class="koth-winner-card duke"><h2>Duke of ${gameName}</h2><p>${dukes.join(' & ')}</p><span>with ${dukeHighScore} win(s)</span></div><ul class="koth-player-stats">${sortedGameWins.map(playerName => `<li><span>${playerName}</span><span class="record">${gameData.wins[playerName] || 0}W - ${gameData.losses[playerName] || 0}L</span></li>`).join('')}</ul></div>`;
             }
         }
         kothResultsContent.innerHTML = kingContent + dukeContent;
@@ -156,9 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.players = [...document.querySelectorAll('.player-name-input')].map(input => input.value.trim()).filter(name => name);
         if (state.players.length < 1) { alert('Please enter at least one player name.'); return; }
         
-        // Save the current players list for next time
         state.lastPlayers = [...state.players];
-
         state.currentGame = gameSelect.value;
         if (!state.currentGame) { alert('Please create a game first!'); return; }
         state.scores = {};
@@ -167,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.endGamePromptShown = false;
         state.gameHistory.unshift({ game: state.currentGame, players: state.players, startTime: state.gameStartTime, endTime: null, duration: 'In Progress', winner: null, pointLog: [] });
         
-        saveState(); // Save state including the new lastPlayers list
+        saveState();
         renderScoreboard();
         showScreen('game');
     }
@@ -175,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function addScore(player, points) {
         if (isNaN(points)) return;
         state.scores[player] += points;
+        state.gameHistory[0].pointLog.push({ player, pointsAdded: points, newScore: state.scores[player] });
+        saveState(); // Correctly save state after score change
         renderScoreboard();
         checkAndPromptEndGame();
     }
@@ -216,8 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
             state.gameHistory[0].endTime = endTime;
             state.gameHistory[0].winner = winner;
             state.gameHistory[0].duration = `${minutes}m ${seconds}s`;
-            // Update the history entry with point logs
-            state.gameHistory[0].pointLog = Object.entries(state.scores).map(([player, score]) => ({ player, finalScore: score }));
         }
         saveState();
         showModal('winner');
@@ -225,7 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function startNewGame() {
         showModal('winner', false);
-        populateLastPlayers(); // Pre-fill the names for the new game
+        // We don't call populateLastPlayers here, it's done on load.
+        // The inputs will retain their values until a new game starts with different names.
         showScreen('setup');
     }
 
@@ -254,4 +256,36 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('new-game-from-game-btn').addEventListener('click', startNewGame);
     document.getElementById('manage-games-btn').addEventListener('click', () => { updateManageGamesList(); showModal('manageGames'); });
     document.getElementById('close-manage-games-btn').addEventListener('click', () => showModal('manageGames', false));
-    document.getElementById('save-new-game-btn
+    document.getElementById('save-new-game-btn').addEventListener('click', () => {
+        const nameInput = document.getElementById('new-game-name'); const scoreInput = document.getElementById('new-game-score');
+        const name = nameInput.value.trim(); const score = parseInt(scoreInput.value, 10);
+        if (name && score > 0) {
+            state.games.push({ name, winningScore: score }); saveState(); updateGameSelect(); updateManageGamesList();
+            nameInput.value = ''; scoreInput.value = '';
+        } else { alert('Please enter a valid name and score.'); }
+    });
+    document.getElementById('saved-games-list').addEventListener('click', e => {
+        if (e.target.classList.contains('delete-game-btn')) {
+            const index = e.target.dataset.index;
+            if (confirm(`Are you sure you want to delete ${state.games[index].name}?`)) {
+                state.games.splice(index, 1); saveState(); updateGameSelect(); updateManageGamesList();
+            }
+        }
+    });
+    document.getElementById('view-history-btn').addEventListener('click', () => { renderHistory(); showScreen('history'); });
+    document.getElementById('back-to-setup-btn').addEventListener('click', () => showScreen('setup'));
+    document.getElementById('round-finished-no').addEventListener('click', () => showModal('endOfRound', false));
+    document.getElementById('round-finished-yes').addEventListener('click', () => { showModal('endOfRound', false); declareWinner(); });
+
+    // --- INITIALIZATION ---
+    loadState();
+    updateGameSelect();
+    populateLastPlayers(); // Populate names on first load
+    showScreen('setup');
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('service-worker.js').then(reg => console.log('SW registered.', reg)).catch(err => console.error('SW registration failed:', err));
+        });
+    }
+});
