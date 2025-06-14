@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Game Counter V2</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <div id="app-container">
+        <div id="setup-screen" class="screen active">
+            <header><h1>Game Setup</h1></header>
+            <main>
+                <div class="card">
+                    <h2>1. Choose Game</h2>
+                    <select id="game-select"></select>
+                    <button id="manage-games-btn" class="secondary">Manage Games</button>
+                </div>
+                <div class="card">
+                    <h2>2. Enter Players</h2>
+                    <div id="player-inputs">
+                        <input type="text" placeholder="Player 1 Name" class="player-name-input">
+                        <input type="text" placeholder="Player 2 Name" class="player-name-input">
+                    </div>
+                    <button id="add-player-field-btn" class="secondary">Add Another Player</button>
+                </div>
+                <button id="start-game-btn" class="primary">Start Game</button>
+                <button id="view-history-btn">View Game History</button>
+            </main>
+        </div>
+        <div id="game-screen" class="screen">
+            <header>
+                <h1 id="game-title"></h1>
+                <h2 id="winning-score-display"></h2>
+            </header>
+            <main id="scoreboard"></main>
+            <footer>
+                <button id="new-game-from-game-btn">New Game</button>
+            </footer>
+        </div>
+        <div id="winner-modal" class="modal-overlay">
+            <div class="modal-content winner-card">
+                <h2>WINNER!</h2>
+                <p id="winner-name"></p>
+                <button id="new-game-from-winner-btn" class="primary">Start New Game</button>
+            </div>
+        </div>
+        <div id="end-of-round-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>End of Round?</h2>
+                <p>A player has reached the winning score. Has the current round of play finished?</p>
+                <div class="modal-button-group">
+                    <button id="round-finished-yes" class="primary">Yes, Final Scores</button>
+                    <button id="round-finished-no" class="secondary">No, Continue Round</button>
+                </div>
+            </div>
+        </div>
+        <div id="manage-games-modal" class="modal-overlay">
+            <div class="modal-content">
+                <h2>Manage Games</h2>
+                <div id="saved-games-list"></div>
+                <h3>Add a New Game</h3>
+                <input type="text" id="new-game-name" placeholder="Game Name (e.g., Catan)">
+                <input type="number" id="new-game-score" placeholder="Winning Score (e.g., 10)">
+                <button id="save-new-game-btn" class="primary">Save Game</button>
+                <button id="close-manage-games-btn" class="secondary">Close</button>
+            </div>
+        </div>
+        <div id="history-screen" class="screen">
+            <header><h1>Game History</h1></header>
+            <main id="history-list"></main>
+            <footer>
+                <button id="back-to-setup-btn">Back to Setup</button>
+            </footer>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

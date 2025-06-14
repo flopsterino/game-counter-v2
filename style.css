@@ -1,0 +1,49 @@
+:root {
+    --primary-color: #007aff; --secondary-color: #8e8e93; --success-color: #34c759; --danger-color: #ff3b30; --background-color: #f2f2f7; --card-background-color: #ffffff; --text-color: #1c1c1e; --subtle-text-color: #6d6d72; --border-color: #e5e5ea; --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+}
+body, html { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: var(--background-color); color: var(--text-color); }
+#app-container { max-width: 800px; margin: 0 auto; min-height: 100vh; }
+.screen { display: none; flex-direction: column; }
+.screen.active { display: flex; }
+header { background-color: var(--card-background-color); padding: 20px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-bottom: 1px solid var(--border-color); }
+header h1 { margin: 0; font-size: 1.75rem; font-weight: 600; }
+header h2 { margin: 4px 0 0; font-size: 1rem; color: var(--subtle-text-color); font-weight: 400; }
+main { padding: 20px; flex-grow: 1; }
+footer { padding: 20px; background-color: var(--card-background-color); border-top: 1px solid var(--border-color); }
+.card { background: var(--card-background-color); border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: var(--card-shadow); }
+.card h2 { margin-top: 0; margin-bottom: 20px; font-size: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+button { display: block; width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 1.05rem; font-weight: 600; cursor: pointer; margin-top: 10px; transition: transform 0.1s ease, background-color 0.2s; }
+button:active { transform: scale(0.98); }
+button.primary { background-color: var(--primary-color); color: white; }
+button.secondary { background-color: var(--border-color); color: var(--text-color); }
+input[type="text"], input[type="number"], select { width: 100%; padding: 14px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 1rem; box-sizing: border-box; background-color: #fcfcfd; }
+input:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2); }
+#player-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.player-score-card { display: flex; flex-direction: column; padding: 20px; background-color: var(--card-background-color); border-radius: 12px; margin-bottom: 15px; box-shadow: var(--card-shadow); transition: background-color 0.3s ease, transform 0.2s ease; }
+.player-score-card.winner { background-color: var(--success-color); color: white; transform: scale(1.02); }
+.player-score-card.winner .player-name, .player-score-card.winner .current-score-label { color: white; }
+.player-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.player-name { font-size: 1.5rem; font-weight: 600; }
+.current-score-container { text-align: right; }
+.current-score { font-size: 2.2rem; font-weight: 700; line-height: 1; }
+.current-score-label { font-size: 0.8rem; color: var(--subtle-text-color); text-transform: uppercase; letter-spacing: 0.5px; }
+.score-input-area { display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; }
+.score-input-area input { flex-grow: 1; }
+.score-input-area button { width: auto; padding: 0 25px; margin-top: 0; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000; -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.modal-overlay.active { display: flex; }
+.modal-content { background: var(--card-background-color); padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+.winner-card h2 { font-size: 2rem; margin: 0; }
+.winner-card #winner-name { font-size: 2.5rem; font-weight: bold; color: var(--success-color); margin: 10px 0 25px; }
+#saved-games-list div { padding: 10px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+#saved-games-list button.delete-game-btn { background: none; color: var(--danger-color); font-weight: bold; margin:0; padding: 5px; width: auto; font-size: 1.2rem; }
+.history-entry { background-color: var(--card-background-color); border-radius: 12px; margin-bottom: 15px; box-shadow: var(--card-shadow); }
+.history-summary { padding: 20px; cursor: pointer; }
+.history-summary h3 { margin: 0 0 5px; font-size: 1.2rem; }
+.history-summary p { margin: 0; color: var(--subtle-text-color); }
+.history-details { padding: 0 20px 20px; display: none; border-top: 1px solid var(--border-color); margin: 15px 20px 0; padding-top: 15px; }
+.history-details p { margin: 5px 0; font-weight: 500;}
+.history-details ul { margin: 10px 0 0; padding-left: 20px; list-style-type: square; }
+.history-details li { margin-bottom: 5px; color: var(--subtle-text-color); }
+.modal-content p { color: var(--subtle-text-color); line-height: 1.5; margin: 15px 0 25px; }
+.modal-button-group { display: flex; gap: 10px; }
